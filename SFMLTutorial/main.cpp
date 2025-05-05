@@ -1,6 +1,9 @@
 #include <iostream>
 #include <SFML/Graphics.hpp> //biblioteca usada para gerar a janela
 
+//Cria um enum para saber facilmente qual textura esta sendo acessada
+enum directions { down, right, up, left };
+
 int main()
 {
 	//tamanho da janela
@@ -11,35 +14,33 @@ int main()
 	sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode({ width, height }), "Tutorials");
 	window->setFramerateLimit(60); //limita os frames para 60
 
-	/*sf::CircleShape circle(64.0f); //cria um circulo de raio 7
-	circle.setOrigin(circle.getGeometricCenter()); //faz com que sempre que se desenhe o circulo, seu centro seja de fato seu centro
-	circle.setPosition({ width / 4.0f, height / 4.0f }); //inicia o circulo no centro
-	circle.setFillColor(sf::Color::Green); //define a cor do circulo
-	circle.setOutlineThickness(3.0f); //define a grossura de seu contorno
-	circle.setOutlineColor(sf::Color::Magenta); //define a cor de seu contorno
-	circle.setPointCount(3); //define o numero de pontos, neste caso é um triangulo
+	//Cria uma textura
+	sf::Texture texture;
 
-	sf::RectangleShape rectangle({ 50.0f, 80.0f }); //Cria um retangulo com 50 de altura e 80 de largura
-	rectangle.setOrigin(rectangle.getSize() / 2.0f);
-	rectangle.setPosition({ width / 2.0f, height / 2.0f });
-	rectangle.setFillColor(sf::Color::Yellow);
-	rectangle.setOutlineThickness(5.0f);
-	rectangle.setOutlineColor(sf::Color::Blue);*/
+	//Carrega a textura de um arquivo
+	if (!texture.loadFromFile("Sprites/ExampleSprite.png"))
+	{
+		//Caso não abra, retorna -1
+		std::cerr << "ERROR::COULD NOT NOT FILE::Sprites/ExampleSprite.png" << std::endl;
+		return -1;
+	}
 
-	sf::ConvexShape convex;
-	convex.setPointCount(6);
-	convex.setPoint(0, { 13.0f, 17.0f }); //fala onde será o ponto
-	convex.setPoint(1, { 3.5f, 1.6f });
-	convex.setPoint(2, { 0.25f, -12.0f });
-	convex.setPoint(3, { -12.0f, -7.3f });
-	convex.setPoint(4, { -12.5f, -1.6f });
-	convex.setPoint(5, { -5.0f, 7.5f });
-	convex.setOrigin(convex.getGeometricCenter());
-	convex.setFillColor(sf::Color(0x3F00FFFF));//1-2(vermelho), 3-4(verde), 5-6(azul), 7-8(transparencia)
-	convex.setOutlineThickness(2.4f);
-	convex.setOutlineColor(sf::Color(0xFF8888FF));
-	convex.setPosition({ width / 2.0f, height / 2.0f });
+	//Carrega a textura no sprite
+	sf::Sprite sprite(texture);
 
+	//Cria um vetor para armazenar as texturas
+	sf::IntRect dir[4];
+
+	//Separa a textura em outras mini texturas
+	for (int i = 0; i < 4; i++)
+	{
+		dir[i] = sf::IntRect({ {32 * i, 0}, {32, 32} });
+	}
+	//Inicia a textura
+	sprite.setTextureRect(dir[down]);
+	sprite.setOrigin({ 16, 16 });
+	sprite.setPosition({ width / 2.0f, height / 2.0f });
+	sprite.setColor(sf::Color(0x6495EDFF));
 
 	//enquanto a janela estiver aberta
 	while (window->isOpen())
@@ -64,29 +65,36 @@ int main()
 			}
 		}
 
-		//circle.rotate(sf::degrees(1)); //rotaciona o circulo em 1 grau a cada frame
-		//circle.move({ 1.0f, -1.0f }); //move o circulo para direita e para cima
+		//É possivel rotacionar sprites
+		sprite.rotate(sf::degrees(1));
 
-		//circle.move({ 1.0f, 1.0f });
-		//rectangle.move({ -1.0f, -1.0f });
-
-		//circle.setFillColor(sf::Color::Green);
-		//rectangle.setFillColor(sf::Color::Yellow);
-
-		//detecta se o circulo e o retangulo se encostaram
-		/*if (circle.getGlobalBounds().findIntersection(rectangle.getGlobalBounds()))
+		//O bloco de ifs ira identificar caso wasd estão pressionados para mudar para a textura apropriada e mover
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::S))
 		{
-			circle.setFillColor(sf::Color::Red);
-			rectangle.setFillColor(sf::Color::Red);
-		}*/
-
+			sprite.move({ 0.0f, 1.0f });
+			sprite.setTextureRect(dir[down]);
+		} 
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::W))
+		{
+			sprite.move({ 0.0f, -1.0f });
+			sprite.setTextureRect(dir[up]);
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::D))
+		{
+			sprite.move({ 1.0f, 0.0f });
+			sprite.setTextureRect(dir[right]);
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::A))
+		{
+			sprite.move({ -1.0f, 0.0f });
+			sprite.setTextureRect(dir[left]);
+		}
+		
 		//Render
 		window->clear();
 
 		//Drawing
-		//window->draw(circle);
-		//window->draw(rectangle);
-		window->draw(convex);
+		window->draw(sprite);
 
 		window->display();
 	}
