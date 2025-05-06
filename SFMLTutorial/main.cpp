@@ -1,5 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp> //biblioteca usada para gerar a janela
+#include <random>
+#include <chrono>
 
 //Converte cores HSV para RGB
 sf::Color HSVToRGB(float h, float s, float v)
@@ -36,9 +38,6 @@ sf::Color HSVToRGB(float h, float s, float v)
 	return sf::Color(rI, gI, bI);
 }
 
-//Cria um enum para saber facilmente qual textura esta sendo acessada
-enum directions { down, right, up, left };
-
 int main()
 {
 	//tamanho da janela
@@ -49,89 +48,37 @@ int main()
 	sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode({ width, height }), "Tutorials");
 	window->setFramerateLimit(60); //limita os frames para 60
 
-	int n = 24;//Precisa ser par
-	
-	//Cria um array de um tipo primitivo(pontos, linhas, triangulos) e depois define qual o tipo
-	sf::VertexArray lines;
-	lines.setPrimitiveType(sf::PrimitiveType::Lines);
-	lines.resize(n);//Ajusta o tamanho do vetor
+	//Imagem a ser utilizada na janela
+	sf::Image image;
+	image.resize({ width, height });
 
-	//Este tipo faz com que o ultimo ponto de uma linha torne-se o ponto de partida de outra
-	sf::VertexArray lineStripes;
-	lineStripes.setPrimitiveType(sf::PrimitiveType::LineStrip);
-	lineStripes.resize(n);
+	sf::Texture texture(image.getSize());
 
-	//Triangulo 
-	sf::VertexArray triangles;
-	triangles.setPrimitiveType(sf::PrimitiveType::Triangles);
-	triangles.resize(6);
-	triangles.resize(width * height * 6);
+	sf::Sprite sprite(texture);
 
-	float size = 48.0f;
-	
-	//Aqui se faz o quadrado
-	//sf::Vector2f v0 = { 0.0f, 0.0f };
-	//sf::Vector2f v1 = { size, 0.0f };
-	//sf::Vector2f v2 = { 0.0f, size };
-	//sf::Vector2f v3 = { size, size };
-	//
-	//triangles[0].position = v0;
-	//triangles[1].position = v1;
-	//triangles[2].position = v2;
-	//triangles[3].position = v3;
-	//triangles[4].position = v2;
-	//triangles[5].position = v1;
+	//Tamanho do tabuleiro
+	unsigned int size = width * height;
 
-	//for (int i = 0; i < 6; i++)
-	//{
-	//	triangles[i].position += {width / 1.5f, height / 1.5f};
-	//
-	//	triangles[i].color = HSVToRGB(60.0f * i, 1.0f, 1.0f);
-	//}
+	//Variavel do tabuleiro e vizinhos
+	unsigned int* board = new unsigned int[size];
+	unsigned int* neighbors = new unsigned int[size];
 
-	//Cobre toda a tela em triangulos
-	for (int i = 0; i < width; i++)
+	//Direcoes possiveis
+	int dir[8] = { 1, int(width) + 1, int(width), int(width) - 1 - 1, -int(width) - 1, -int(width), -int(width) + 1 };
+
+	//Geracao de numeros aleatorios
+	std::default_random_engine randEng;
+	int seed = std::chrono::steady_clock::now().time_since_epoch().count();
+	randEng.seed(seed);
+
+	//Tabuleiro aleatorizado
+	for (unsigned int i = 0; i < size; ++i)
 	{
-		for (int j = 0; j < height; j++)
-		{
-			const int index = 6 * (i * height + j);
-
-			sf::Vector2f v0 = { size * i, size * j };
-			sf::Vector2f v1 = { size * i, size * (j + 1) };
-			sf::Vector2f v2 = { size * (i + 1), size * j };
-			sf::Vector2f v3 = { size * (i + 1), size * (j + 1) };
-
-			triangles[index + 0].position = v0;
-			triangles[index + 1].position = v1;
-			triangles[index + 2].position = v2;
-			triangles[index + 3].position = v3;
-			triangles[index + 4].position = v2;
-			triangles[index + 5].position = v1;
-
-			triangles[index + 0].color = HSVToRGB(0.0f, 1.0f, 1.0f);
-			triangles[index + 1].color = HSVToRGB(60.0f, 1.0f, 1.0f);
-			triangles[index + 2].color = HSVToRGB(120.0f, 1.0f, 1.0f);
-			triangles[index + 3].color = HSVToRGB(180.0f, 1.0f, 1.0f);
-			triangles[index + 4].color = HSVToRGB(240.0f, 1.0f, 1.0f);
-			triangles[index + 5].color = HSVToRGB(300.0f, 1.0f, 1.0f);
-		}
+		std::uniform_int_distribution onOff(0, 1);
+		board[i] = onOff(randEng);
+		neighbors[i] = 0;
 	}
 
-	//Espiral
-	for (int i = 0; i < n; i++)
-	{
-		sf::Vector2f pos = { float(i * cos(i)), float(i * sin(i)) };
-		float hue = i * (360.0f / n);
-
-		lines[i].position = pos;
-		lines[i].position += {width / 4.0f, height / 4.0f};
-		lines[i].color = HSVToRGB(hue, 1.0f, 1.0f);
-
-		lineStripes[i].position = pos;
-		lineStripes[i].position += {width / 2.0f, height / 2.0f};
-		lineStripes[i].color = HSVToRGB(hue, 1.0f, 1.0f);
-	}
-	
 	//enquanto a janela estiver aberta
 	while (window->isOpen())
 	{
@@ -155,18 +102,72 @@ int main()
 			}
 		}
 
-		
+		//Atualza o numero de vizinhos para cada celula ligada
+		for (unsigned int i = 0; i < size; ++i)
+		{
+			if (board[i] == 0)
+			{
+				continue;
+			}
+			for (int j = 0; j < 8; ++j)
+			{
+				int index = i + dir[j];
+				if (index < 0)
+				{
+					index += size;
+				}
+				else if (index > size - 1)
+				{
+					index -= size;
+				}
+				++neighbors[index];
+			}
+		}
+
+		//Regras do Jogo da Vida de Conway
+		for (unsigned int i = 0; i < size; ++i)
+		{
+			//if off && neighbors == 3 -> On
+			//if on && neighbors < 2 || neighbors > 3 -> Off
+
+			if (board[i] == 0 && neighbors[i] == 3)
+			{
+				board[i] = 1;
+			}
+			else if (board[i] == 1 && (neighbors[i] < 2 || neighbors[i] > 3))
+			{
+				board[i] = 0;
+			}
+
+			// Define a cor de cada celula
+			sf::Color color = board[i] == 1 ? sf::Color::White : sf::Color::Black;
+
+			unsigned int x = i % width;
+			unsigned int y = floor(i / width);
+
+			//Atualiza a cor da celula na posicao correspondente
+			sf::Vector2u pos = sf::Vector2u(x, y);
+
+			image.setPixel(pos, color);
+
+			neighbors[i] = 0;
+		}
+
+		//Atualiza a textura
+		texture.update(image);
+
 		//Render
 		window->clear();
 
 		//Drawing
-		window->draw(lines);
-		window->draw(lineStripes);
-		window->draw(triangles);
+		window->draw(sprite);
 
 		window->display();
 	}
 
+	//Libera memoria alocada
+	delete[] board;
+	delete[] neighbors;
 	delete window;
 	return 0;
 }
