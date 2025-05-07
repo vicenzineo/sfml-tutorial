@@ -81,45 +81,81 @@ int main()
 	sf::RenderWindow *window = new sf::RenderWindow(sf::VideoMode({ width, height }), "Tutorials");
 	window->setFramerateLimit(60); //limita os frames para 60
 
-	//Inicializa a fonte
-	sf::Font font;
-	LoadFont(font, "Fonts/arial.ttf");
+	//Outra janela
+	sf::RenderWindow *window2 = new sf::RenderWindow(sf::VideoMode({ width / 3, height / 2 }), "Tutorials2");
+	window2->setFramerateLimit(60);
 
-	//Texto a ser exibido
-	sf::Text text(font);
-	text.setString("Time: 0.000000");
-	text.setOrigin(text.getGlobalBounds().size / 2.0f);
-	text.setPosition({ width / 2.0f, height / 2.0f });
-	text.setFillColor(sf::Color(0x6495EDFF));
-	text.setOutlineThickness(1.0f);
-	text.setOutlineColor(sf::Color(0x9B6A12FF));
+	sf::CircleShape circle(64.0f);
+	circle.setOrigin(circle.getGeometricCenter());
+	circle.setPosition({ width / 2.0f, height / 2.0f });
+	circle.setFillColor(sf::Color(0x6495EDFF));
 
-	//Relogio
-	sf::Clock clock;
-	float dt = clock.restart().asSeconds();
+	sf::CircleShape circle2(32.0f);
+	circle2.setOrigin(circle2.getGeometricCenter());
+	circle2.setPosition({ window2->getSize().x / 2.0f, window2->getSize().x / 2.0f });
+	circle2.setFillColor(sf::Color(0x6495EDFF));
+
+	window2->setPosition(window->getPosition());
 	
 	//enquanto a janela estiver aberta
 	while (window->isOpen())
 	{
+		window2->setPosition(window->getPosition());
+		
+
+		//Faz seguir o mouse quando a janela for selecionada
+		if (window->hasFocus())
+		{
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+			{
+				sf::Vector2i pos = sf::Mouse::getPosition(*window);
+				circle.setPosition(sf::Vector2f(pos));
+			}
+		}
+
+		if (window2->hasFocus())
+		{
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+			{
+				sf::Vector2i pos = sf::Mouse::getPosition(*window2);
+				circle2.setPosition(sf::Vector2f(pos));
+			}
+		}
+
+		if (window2->isOpen() == false)
+		{
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::O))
+			{
+				window2 = new sf::RenderWindow(sf::VideoMode({ width / 3, height / 2 }), "Tutorials2");
+			}
+		}
+
+		if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
+		{
+			window2->close();
+		}
+
+		std::cout << "X: " << sf::Mouse::getPosition(*window).x << std::endl;
+		std::cout << "Y: " << sf::Mouse::getPosition(*window).y << std::endl << std::endl;
+
 		PollEvents(*window);
-
-		dt = clock.restart().asSeconds();
-
-		std::stringstream sStream;
-		sStream << "Time" << dt;
-		text.setString(sStream.str());
+		PollEvents(*window2);
 		
 		//Render
 		window->clear();
+		window2->clear();
 
 		//Drawing
-		window->draw(text);
+		window->draw(circle);
+		window2->draw(circle2);
 
 		window->display();
+		window2->display();
 	}
 
 	//Libera memoria alocada
 	delete window;
+	delete window2;
 
 	return 0;
 }
