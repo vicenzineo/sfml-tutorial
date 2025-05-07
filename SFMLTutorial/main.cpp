@@ -2,6 +2,8 @@
 #include <SFML/Graphics.hpp> //biblioteca usada para gerar a janela
 #include <random>
 #include <chrono>
+#include <string>
+#include <sstream>
 
 //Converte cores HSV para RGB
 sf::Color HSVToRGB(float h, float s, float v)
@@ -60,6 +62,15 @@ void PollEvents(sf::RenderWindow &window)
 	}
 }
 
+//Funcao para carregar fontes
+void LoadFont(sf::Font& font, std::string str)
+{
+	if (!font.openFromFile(str)) 
+	{
+		std::cerr << "ERROR: COULD NOT LOAD FILE::" << str << "!!!" << std::endl;
+	}
+}
+
 int main()
 {
 	//tamanho da janela
@@ -70,70 +81,39 @@ int main()
 	sf::RenderWindow *window = new sf::RenderWindow(sf::VideoMode({ width, height }), "Tutorials");
 	window->setFramerateLimit(60); //limita os frames para 60
 
-	sf::Texture texture;
+	//Inicializa a fonte
+	sf::Font font;
+	LoadFont(font, "Fonts/arial.ttf");
 
-	if (!texture.loadFromFile("Sprites/AnimationExample.png"))
-	{
-		std::cerr << "COULD NOT LOAD FILE::Sprites/AnimationExample.png!!!" << std::endl;
-		return -1;
-	}
+	//Texto a ser exibido
+	sf::Text text(font);
+	text.setString("Time: 0.000000");
+	text.setOrigin(text.getGlobalBounds().size / 2.0f);
+	text.setPosition({ width / 2.0f, height / 2.0f });
+	text.setFillColor(sf::Color(0x6495EDFF));
+	text.setOutlineThickness(1.0f);
+	text.setOutlineColor(sf::Color(0x9B6A12FF));
 
-	sf::Sprite sprite(texture);
-
-	//Para lidar com a animacao
-	int texWidth = 0;
-
-	sprite.setTextureRect({ {0,0}, {32, 32} });
-	sprite.setOrigin({ sprite.getTextureRect().size.x / 2.0f,  sprite.getTextureRect().size.y / 2.0f });
-	sprite.setPosition({ width / 2.0f, height / 2.0f });
-	sprite.setScale({ 4.0f, 4.0f });
-
-	float timer = 0.0f;
-	float timerMax = 0.25f;
-	float waitTimerMax = 2.25f;
-	float waitTimer = waitTimerMax;
-
+	//Relogio
+	sf::Clock clock;
+	float dt = clock.restart().asSeconds();
+	
 	//enquanto a janela estiver aberta
 	while (window->isOpen())
 	{
 		PollEvents(*window);
 
-		//Para fazer a animacao parar por um tempo
-		if (waitTimer >= waitTimerMax)
-		{
-			timer += 0.1f;
-			if (timer >= timerMax)
-			{
-				texWidth += 32;
+		dt = clock.restart().asSeconds();
 
-				//Quando chegar ao final, volta ao comeco
-				if (texWidth >= texture.getSize().x)
-				{
-					texWidth = 0.0f;
-				}
-
-				//Animacao continuara movendo para a direita
-				if (texWidth < texture.getSize().x)
-				{
-					sprite.setTextureRect({ {texWidth, 0}, {32, 32} });
-				}
-			}
-			//Para a animacao no meio
-			if (texWidth == texture.getSize().x / 2.0f)
-			{
-				waitTimer = 0.0f;
-			}
-		}
-		if (waitTimer < waitTimerMax)
-		{
-			waitTimer += 0.1f;
-		}
+		std::stringstream sStream;
+		sStream << "Time" << dt;
+		text.setString(sStream.str());
 		
 		//Render
 		window->clear();
 
 		//Drawing
-		window->draw(sprite);
+		window->draw(text);
 
 		window->display();
 	}
