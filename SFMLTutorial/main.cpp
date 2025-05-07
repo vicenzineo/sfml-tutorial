@@ -38,6 +38,28 @@ sf::Color HSVToRGB(float h, float s, float v)
 	return sf::Color(rI, gI, bI);
 }
 
+void PollEvents(sf::RenderWindow &window)
+{
+	while (const std::optional event = window.pollEvent())
+	{
+		//se a janela for fechada(via clicar no X)
+		if (event->is<sf::Event::Closed>())
+		{
+			//fecha a janela
+			window.close();
+		}
+		//se o evento for usar o teclado(pega a tecla)
+		else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
+		{
+			//ve se a tecla pressionada é Esc
+			if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
+			{
+				window.close();
+			}
+		}
+	}
+}
+
 int main()
 {
 	//tamanho da janela
@@ -45,117 +67,68 @@ int main()
 	unsigned int height = 360;
 
 	//Cria a janela e da um nome a ela
-	sf::RenderWindow* window = new sf::RenderWindow(sf::VideoMode({ width, height }), "Tutorials");
+	sf::RenderWindow *window = new sf::RenderWindow(sf::VideoMode({ width, height }), "Tutorials");
 	window->setFramerateLimit(60); //limita os frames para 60
 
-	//Imagem a ser utilizada na janela
-	sf::Image image;
-	image.resize({ width, height });
+	sf::Texture texture;
 
-	sf::Texture texture(image.getSize());
+	if (!texture.loadFromFile("Sprites/AnimationExample.png"))
+	{
+		std::cerr << "COULD NOT LOAD FILE::Sprites/AnimationExample.png!!!" << std::endl;
+		return -1;
+	}
 
 	sf::Sprite sprite(texture);
 
-	//Tamanho do tabuleiro
-	unsigned int size = width * height;
+	//Para lidar com a animacao
+	int texWidth = 0;
 
-	//Variavel do tabuleiro e vizinhos
-	unsigned int* board = new unsigned int[size];
-	unsigned int* neighbors = new unsigned int[size];
+	sprite.setTextureRect({ {0,0}, {32, 32} });
+	sprite.setOrigin({ sprite.getTextureRect().size.x / 2.0f,  sprite.getTextureRect().size.y / 2.0f });
+	sprite.setPosition({ width / 2.0f, height / 2.0f });
+	sprite.setScale({ 4.0f, 4.0f });
 
-	//Direcoes possiveis
-	int dir[8] = { 1, int(width) + 1, int(width), int(width) - 1 - 1, -int(width) - 1, -int(width), -int(width) + 1 };
-
-	//Geracao de numeros aleatorios
-	std::default_random_engine randEng;
-	int seed = std::chrono::steady_clock::now().time_since_epoch().count();
-	randEng.seed(seed);
-
-	//Tabuleiro aleatorizado
-	for (unsigned int i = 0; i < size; ++i)
-	{
-		std::uniform_int_distribution onOff(0, 1);
-		board[i] = onOff(randEng);
-		neighbors[i] = 0;
-	}
+	float timer = 0.0f;
+	float timerMax = 0.25f;
+	float waitTimerMax = 2.25f;
+	float waitTimer = waitTimerMax;
 
 	//enquanto a janela estiver aberta
 	while (window->isOpen())
 	{
-		//pega o próximo evento
-		while (const std::optional event = window->pollEvent())
+		PollEvents(*window);
+
+		//Para fazer a animacao parar por um tempo
+		if (waitTimer >= waitTimerMax)
 		{
-			//se a janela for fechada(via clicar no X)
-			if (event->is<sf::Event::Closed>())
+			timer += 0.1f;
+			if (timer >= timerMax)
 			{
-				//fecha a janela
-				window->close();
-			}
-			//se o evento for usar o teclado(pega a tecla)
-			else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>())
-			{
-				//ve se a tecla pressionada é Esc
-				if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
+				texWidth += 32;
+
+				//Quando chegar ao final, volta ao comeco
+				if (texWidth >= texture.getSize().x)
 				{
-					window->close();
+					texWidth = 0.0f;
+				}
+
+				//Animacao continuara movendo para a direita
+				if (texWidth < texture.getSize().x)
+				{
+					sprite.setTextureRect({ {texWidth, 0}, {32, 32} });
 				}
 			}
+			//Para a animacao no meio
+			if (texWidth == texture.getSize().x / 2.0f)
+			{
+				waitTimer = 0.0f;
+			}
 		}
-
-		//Atualza o numero de vizinhos para cada celula ligada
-		for (unsigned int i = 0; i < size; ++i)
+		if (waitTimer < waitTimerMax)
 		{
-			if (board[i] == 0)
-			{
-				continue;
-			}
-			for (int j = 0; j < 8; ++j)
-			{
-				int index = i + dir[j];
-				if (index < 0)
-				{
-					index += size;
-				}
-				else if (index > size - 1)
-				{
-					index -= size;
-				}
-				++neighbors[index];
-			}
+			waitTimer += 0.1f;
 		}
-
-		//Regras do Jogo da Vida de Conway
-		for (unsigned int i = 0; i < size; ++i)
-		{
-			//if off && neighbors == 3 -> On
-			//if on && neighbors < 2 || neighbors > 3 -> Off
-
-			if (board[i] == 0 && neighbors[i] == 3)
-			{
-				board[i] = 1;
-			}
-			else if (board[i] == 1 && (neighbors[i] < 2 || neighbors[i] > 3))
-			{
-				board[i] = 0;
-			}
-
-			// Define a cor de cada celula
-			sf::Color color = board[i] == 1 ? sf::Color::White : sf::Color::Black;
-
-			unsigned int x = i % width;
-			unsigned int y = floor(i / width);
-
-			//Atualiza a cor da celula na posicao correspondente
-			sf::Vector2u pos = sf::Vector2u(x, y);
-
-			image.setPixel(pos, color);
-
-			neighbors[i] = 0;
-		}
-
-		//Atualiza a textura
-		texture.update(image);
-
+		
 		//Render
 		window->clear();
 
@@ -166,8 +139,7 @@ int main()
 	}
 
 	//Libera memoria alocada
-	delete[] board;
-	delete[] neighbors;
 	delete window;
+
 	return 0;
 }
